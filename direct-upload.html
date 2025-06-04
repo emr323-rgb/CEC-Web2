@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Direct File Upload</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #5a9e97;
+    }
+    .upload-form {
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .file-input {
+      margin: 10px 0;
+    }
+    .upload-btn {
+      background-color: #5a9e97;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      display: none;
+    }
+    .error {
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 10px;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 10px;
+      overflow-x: auto;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Direct File Upload Test</h1>
+  
+  <div class="upload-form">
+    <h2>Simple Fetch API Upload</h2>
+    <div class="file-input">
+      <label for="imageFile">Select Image:</label>
+      <input type="file" id="imageFile" name="imageFile" accept="image/*">
+    </div>
+    <button type="button" id="uploadBtn" class="upload-btn">Upload</button>
+  </div>
+  
+  <div id="result" class="result"></div>
+  
+  <script>
+    document.getElementById('uploadBtn').addEventListener('click', async function() {
+      const resultDiv = document.getElementById('result');
+      const fileInput = document.getElementById('imageFile');
+      
+      if (!fileInput.files.length) {
+        resultDiv.innerHTML = '<p class="error">Please select a file to upload</p>';
+        resultDiv.style.display = 'block';
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      console.log('Uploading file:', file.name);
+      
+      // Show progress
+      resultDiv.innerHTML = '<p>Uploading...</p>';
+      resultDiv.style.display = 'block';
+      
+      try {
+        // Use the raw upload endpoint
+        const uploadURL = '/api/raw-upload/image';
+        
+        // Use fetch to send the file directly
+        const response = await fetch(uploadURL, {
+          method: 'POST',
+          body: file,  // Send the file directly as the body
+          headers: {
+            'Content-Type': file.type  // Set the correct content type
+          }
+        });
+        
+        // Handle response
+        if (response.ok) {
+          const data = await response.json();
+          resultDiv.innerHTML = `
+            <p class="success">Upload successful!</p>
+            <p>File name: ${data.file.filename}</p>
+            <p>File size: ${Math.round(data.file.size / 1024)} KB</p>
+            <p>Detected type: ${data.file.detectedType || 'unknown'}</p>
+            <img src="${data.file.path}" alt="Uploaded image">
+          `;
+        } else {
+          let errorMessage = 'Upload failed';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch (err) {
+            // If response isn't JSON
+            errorMessage = `Status ${response.status}: ${response.statusText}`;
+          }
+          
+          // Get response as text for debugging
+          const responseText = await response.text();
+          
+          resultDiv.innerHTML = `
+            <p class="error">Upload failed: ${errorMessage}</p>
+            <details>
+              <summary>View Response Details</summary>
+              <p>Status: ${response.status}</p>
+              <p>Status Text: ${response.statusText}</p>
+              <pre>${responseText.substring(0, 500)}${responseText.length > 500 ? '...(truncated)' : ''}</pre>
+            </details>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <p class="error">Network error: ${error.message}</p>
+          <details>
+            <summary>View Error Details</summary>
+            <pre>${error.stack || 'No stack trace available'}</pre>
+          </details>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>

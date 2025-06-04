@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple File Upload</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #5a9e97;
+    }
+    .upload-form {
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .file-input {
+      margin: 10px 0;
+    }
+    .upload-btn {
+      background-color: #5a9e97;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      display: none;
+    }
+    .error {
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Simple File Upload</h1>
+  
+  <div class="upload-form">
+    <form id="uploadForm" method="post" enctype="multipart/form-data" action="/api/direct-upload/image">
+      <div class="file-input">
+        <label for="image">Select Image:</label>
+        <input type="file" id="image" name="image" accept="image/*">
+      </div>
+      <button type="submit" class="upload-btn">Upload</button>
+    </form>
+  </div>
+  
+  <div id="result" class="result"></div>
+  
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const resultDiv = document.getElementById('result');
+      const fileInput = document.getElementById('image');
+      
+      if (!fileInput.files.length) {
+        resultDiv.innerHTML = '<p class="error">Please select a file to upload</p>';
+        resultDiv.style.display = 'block';
+        return;
+      }
+      
+      const formData = new FormData(this);
+      
+      resultDiv.innerHTML = '<p>Uploading...</p>';
+      resultDiv.style.display = 'block';
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Success:', data);
+        resultDiv.innerHTML = `
+          <p class="success">Upload successful!</p>
+          <p>File name: ${data.file.filename}</p>
+          <p>File size: ${Math.round(data.file.size / 1024)} KB</p>
+          <img src="${data.file.path}" alt="Uploaded image">
+        `;
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        resultDiv.innerHTML = `<p class="error">Upload failed: ${error.message}</p>`;
+      });
+    });
+  </script>
+</body>
+</html>

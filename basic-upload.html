@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Basic File Upload</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #5a9e97;
+    }
+    .upload-form {
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .file-input {
+      margin: 10px 0;
+    }
+    .upload-btn {
+      background-color: #5a9e97;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      display: none;
+    }
+    .error {
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Basic File Upload Test</h1>
+  
+  <div class="upload-form">
+    <h2>Raw Upload with XMLHttpRequest</h2>
+    <form id="uploadForm">
+      <div class="file-input">
+        <label for="image">Select Image:</label>
+        <input type="file" id="image" name="image" accept="image/*">
+      </div>
+      <button type="button" id="uploadBtn" class="upload-btn">Upload</button>
+    </form>
+  </div>
+  
+  <div id="result" class="result"></div>
+  
+  <script>
+    document.getElementById('uploadBtn').addEventListener('click', function() {
+      const resultDiv = document.getElementById('result');
+      const fileInput = document.getElementById('image');
+      
+      if (!fileInput.files.length) {
+        resultDiv.innerHTML = '<p class="error">Please select a file to upload</p>';
+        resultDiv.style.display = 'block';
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      const xhr = new XMLHttpRequest();
+      
+      // Show progress
+      resultDiv.innerHTML = '<p>Uploading...</p>';
+      resultDiv.style.display = 'block';
+      
+      xhr.open('POST', '/api/simple-upload/image', true);
+      
+      xhr.onload = function() {
+        console.log('Response received:', xhr.status);
+        console.log('Response headers:', xhr.getAllResponseHeaders());
+        console.log('Response text:', xhr.responseText);
+        
+        if (xhr.status === 201) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resultDiv.innerHTML = `
+              <p class="success">Upload successful!</p>
+              <p>File name: ${data.file.filename}</p>
+              <p>File size: ${Math.round(data.file.size / 1024)} KB</p>
+              <img src="${data.file.path}" alt="Uploaded image">
+            `;
+          } catch (e) {
+            console.error('JSON parse error:', e);
+            resultDiv.innerHTML = `
+              <p class="error">Error parsing response: ${e.message}</p>
+              <p>Raw response:</p>
+              <pre style="max-height: 200px; overflow: auto; background: #f0f0f0; padding: 10px; border: 1px solid #ddd;">${xhr.responseText.substring(0, 500)}${xhr.responseText.length > 500 ? '...(truncated)' : ''}</pre>
+            `;
+          }
+        } else {
+          let errorMsg;
+          try {
+            const error = JSON.parse(xhr.responseText);
+            errorMsg = error.error || error.message || 'Unknown error';
+          } catch (e) {
+            errorMsg = `Status ${xhr.status}: ${xhr.statusText}`;
+            if (xhr.responseText) {
+              errorMsg += `\nResponse starts with: ${xhr.responseText.substring(0, 100)}...`;
+            }
+          }
+          
+          resultDiv.innerHTML = `<p class="error">Upload failed: ${errorMsg}</p>`;
+        }
+      };
+      
+      xhr.onerror = function() {
+        resultDiv.innerHTML = '<p class="error">Network error occurred</p>';
+      };
+      
+      // Just send the file directly as the request body
+      xhr.send(file);
+    });
+  </script>
+</body>
+</html>
